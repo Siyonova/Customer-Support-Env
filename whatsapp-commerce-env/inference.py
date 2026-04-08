@@ -119,12 +119,16 @@ def normalise_score(task: str, total_reward: float) -> float:
 # OpenAI-compatible client — HuggingFace backend
 # ---------------------------------------------------------------------------
 
-HF_ROUTER_BASE = "https://router.huggingface.co/hf-inference/models"
-
 MODEL_NAME: str = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.3")
 
 
 def build_client() -> OpenAI:
+    # Generic HF router — model is passed per-request, not in the URL
+    api_base = os.environ.get(
+        "API_BASE_URL",
+        "https://router.huggingface.co/v1",
+    ).strip()
+
     hf_token = os.environ.get("HF_TOKEN", "").strip()
     if not hf_token:
         raise EnvironmentError(
@@ -132,26 +136,6 @@ def build_client() -> OpenAI:
             "Get your token at: https://huggingface.co/settings/tokens\n"
             "Then add it to the .env file: HF_TOKEN=hf_..."
         )
-
-    # Auto-build the URL from MODEL_NAME so they always stay in sync.
-    # If API_BASE_URL is explicitly set we use it, otherwise we construct it.
-    api_base = os.environ.get("API_BASE_URL", "").strip()
-    if not api_base:
-        api_base = f"{HF_ROUTER_BASE}/{MODEL_NAME}/v1"
-        print(
-            f"[INFO] API_BASE_URL not set — using: {api_base}",
-            file=sys.stderr, flush=True,
-        )
-    else:
-        # Warn if the URL model doesn't match MODEL_NAME (common mistake)
-        if MODEL_NAME not in api_base:
-            print(
-                f"[WARN] API_BASE_URL does not contain MODEL_NAME '{MODEL_NAME}'.\n"
-                f"       URL: {api_base}\n"
-                f"       Auto-correcting to: {HF_ROUTER_BASE}/{MODEL_NAME}/v1",
-                file=sys.stderr, flush=True,
-            )
-            api_base = f"{HF_ROUTER_BASE}/{MODEL_NAME}/v1"
 
     return OpenAI(base_url=api_base, api_key=hf_token)
 
