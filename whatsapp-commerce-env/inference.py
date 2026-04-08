@@ -26,6 +26,13 @@ import argparse
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+# Auto-load .env file if present — no manual export needed
+try:
+    from dotenv import load_dotenv
+    load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"), override=False)
+except ImportError:
+    pass  # python-dotenv not installed; fall back to environment variables
+
 from openai import OpenAI
 
 from env import WhatsAppEnv, WhatsAppAction, WhatsAppObservation, TASK_CONFIGS
