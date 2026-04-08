@@ -629,31 +629,67 @@ env = WhatsAppEnv()
 if _OPENENV_AVAILABLE:
     app = create_app(env)
 else:
-    # Fallback: create a minimal FastAPI app for testing without openenv-core
+    # Fallback: minimal FastAPI app used when openenv-core is not installed.
+    # This is the server that runs in Docker / HF Spaces.
     try:
-        from fastapi import FastAPI
+        from fastapi import FastAPI, Body
         from fastapi.responses import JSONResponse
         import uvicorn
 
-        app = FastAPI(title="WhatsApp Commerce Customer", version="1.0.0")
+        app = FastAPI(
+            title="WhatsApp Commerce Customer",
+            version="1.0.0",
+            description="OpenEnv RL environment for WhatsApp customer support",
+        )
+
+        # ----------------------------------------------------------------
+        # HF Space liveness probe — must return 200
+        # ----------------------------------------------------------------
+        @app.get("/")
+        def root():
+            return {"status": "ok", "env": "WhatsApp Commerce Customer", "version": "1.0.0"}
 
         @app.get("/health")
         def health():
             return {"status": "ok"}
 
+        # ----------------------------------------------------------------
+        # OpenEnv-compatible endpoints
+        # ----------------------------------------------------------------
+
+        class ResetRequest(BaseModel):
+            task: str = "easy"
+
         @app.post("/reset")
-        def reset(task: str = "easy"):
-            obs = env.reset(task=task)
-            return obs.dict()
+        def reset(body: ResetRequest = Body(default=ResetRequest())):
+            """Start a new episode. Accepts JSON body: {"task": "easy"|"medium"|"hard"}"""
+            obs = env.reset(task=body.task)
+            return obs.model_dump()
 
         @app.post("/step")
         def step(action: WhatsAppAction):
+            """Execute one action. Returns the next observation."""
             obs = env.step(action)
-            return obs.dict()
+            return obs.model_dump()
 
         @app.get("/state")
         def state():
+            """Return the current environment state snapshot."""
             return env.state
+
+        @app.get("/tasks")
+        def tasks():
+            """List all available tasks with their configurations."""
+            return {
+                "tasks": [
+                    {
+                        "id": task_id,
+                        "name": cfg["description"],
+                        "difficulty": cfg["difficulty"],
+                    }
+                    for task_id, cfg in TASK_CONFIGS.items()
+                ]
+            }
 
     except ImportError:
         app = None  # type: ignore
