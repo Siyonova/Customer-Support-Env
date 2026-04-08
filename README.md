@@ -284,7 +284,3 @@ whatsapp-commerce-env/
 ```
 
 ---
-
-## License
-
-MIT
