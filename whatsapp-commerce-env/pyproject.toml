@@ -37,6 +37,7 @@ dependencies = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
     "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -50,11 +51,12 @@ dev = [
 ]
 
 [project.scripts]
+server = "server.app:main"
 whatsapp-env = "env:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["whatsapp*"]
+include = ["whatsapp*", "server*"]
 
 [tool.black]
 line-length = 100
