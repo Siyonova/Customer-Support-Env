@@ -1,0 +1,91 @@
+name: whatsapp-commerce-customer
+version: "1.0.0"
+description: >
+  Simulate a real-world WhatsApp customer support system where an AI agent
+  interacts with a deterministic user and a backend SQLite database.
+  Three tasks of increasing difficulty test order tracking, address updates,
+  and refund policy enforcement.
+
+entrypoint: env:app
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+tasks:
+  - id: easy
+    name: "Order Tracking"
+    difficulty: easy
+    description: >
+      The customer asks for the status of order #101 (currently 'processing').
+      The agent must query the database and respond with the correct status.
+    config:
+      task: easy
+      target_order_id: 101
+      expected_status: processing
+    grader:
+      type: reward_threshold
+      threshold: 1.0
+    reward_spec:
+      correct_sql_query: +0.2
+      correct_final_answer: +1.0
+      max_reward: 1.2
+    time_limit_seconds: 120
+
+  - id: medium
+    name: "Address Update"
+    difficulty: medium
+    description: >
+      The customer wants to update the delivery address for order #102 (currently 'shipped').
+      Since the order is already shipped, the agent must recognise it cannot be updated and
+      communicate this to the customer. Alternatively, test with an order in 'processing' state
+      where the update IS allowed and both partial + completion rewards apply.
+    config:
+      task: medium
+      target_order_id: 102
+    grader:
+      type: reward_threshold
+      threshold: 0.3
+    reward_spec:
+      valid_db_mutation: +0.3
+      task_completion: +1.0
+      illegal_update_penalty: 0.0
+      max_reward: 1.3
+    time_limit_seconds: 180
+
+  - id: hard
+    name: "Refund Policy Enforcement"
+    difficulty: hard
+    description: >
+      The customer requests a refund for order #103, which was delivered 45 days ago.
+      Company policy only allows refunds within 30 days of delivery.
+      The agent MUST deny the refund. Issuing the refund incurs a penalty.
+    config:
+      task: hard
+      target_order_id: 103
+      policy_max_days: 30
+      order_age_days: 45
+    grader:
+      type: reward_threshold
+      threshold: 1.0
+    reward_spec:
+      correct_denial: +1.0
+      illegal_refund_penalty: -0.5
+      max_reward: 1.0
+    time_limit_seconds: 240
+
+evaluation:
+  max_steps_per_episode: 20
+  max_ram_gb: 8
+  max_vcpu: 2
+  inference_timeout_minutes: 20
+
+metadata:
+  author: "WhatsApp Commerce Team"
+  tags:
+    - whatsapp
+    - customer-support
+    - sql
+    - reinforcement-learning
+    - function-calling
+  license: MIT
